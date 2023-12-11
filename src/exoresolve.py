@@ -81,7 +81,7 @@ def good_url(url):
     if len(url) == 0 or not url[0].isalnum() or not url[-1].isalnum():
         return False
     for i, j in zip(url[:-1], url[1:]):
-        if (not j.isalnum() and j != ".") or i == j == ".":
+        if (not j.isalnum() and j not in ".-") or i == j == ".":
             return False
     return True
 
