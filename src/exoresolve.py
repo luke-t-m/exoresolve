@@ -16,6 +16,7 @@ always_files = [
     "/etc/dnsmasq.conf",
     dnsmasq_conf,
     f"{hovm}/lists/never.list",
+    "/etc/hosts",
 ]
 sometimes_files = always_files + [
     f"{hovm}/exoresolve.py",
