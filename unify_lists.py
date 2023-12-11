@@ -30,7 +30,7 @@ def gigarun(args):
 def sort_sections(raw):
     sections = raw.split("#")
     sections = [section.strip().split("\n") for section in sections if section != ""]
-    return {section[0]: section[1:] for section in sections}
+    return {section[0]: set(section[1:]) for section in sections}
 
 
 hovm = "/usr/local/exoresolve"
@@ -38,7 +38,7 @@ hovm = "/usr/local/exoresolve"
 # Generate key.
 if False:
     key = Fernet.generate_key()  # store in a secure location
-    gigawrite(where did i put it????
+    gigawrite("trollololollolllolol", "sned")
 
 
 key = gigaread(f"{hovm}/keyed").encode()
@@ -50,9 +50,9 @@ for list_name in ["always", "sometimes", "never"]:
     sections = sort_sections(raw)
     enc_raw = gigaread(f"{dir_path}/encrypted_lists/{list_name}.list.enc")
     if len(enc_raw) != 0:
-        enc_raw = ferny.decrypt(enc_raw.encode())
+        enc_raw = ferny.decrypt(enc_raw.encode()).decode()
     
-    enc_sections = sort_sections(enc_raw.decode())
+    enc_sections = sort_sections(enc_raw)
 
     for section in enc_sections:
         if section in sections:
@@ -62,6 +62,7 @@ for list_name in ["always", "sometimes", "never"]:
 
     out = []
     for k, v in sections.items():
+        v = list(v)
         v.sort()
         head = f"# {k}"
         tail = "\n".join(v)
