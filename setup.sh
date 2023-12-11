@@ -15,6 +15,11 @@ echo "Make directory structure in /usr/local."
 sudo mkdir -p /usr/local/exoresolve
 sudo mkdir -p /usr/local/exoresolve/lists
 
+echo "Make harbinger, conf, and temp_conf file."
+sudo touch "/usr/local/exoresolve/harbinger"
+sudo touch "/usr/local/exoresolve/conf"
+sudo touch "/usr/local/exoresolve/temp_conf"
+
 echo "Copy exoresolve.py to /usr/local."
 sudo cp $SCRIPT_DIR/src/exoresolve.py /usr/local/exoresolve/exoresolve.py
 
@@ -25,7 +30,7 @@ echo "Copy killhand.ko to /usr/local."
 sudo cp $SCRIPT_DIR/src/killhand/killhand.ko /usr/local/exoresolve/killhand.ko
 
 
-echo "Test killhand.ko can be loaded and removed."
+echo "Test killhand.ko can be inserted and removed."
 if lsmod | grep -wq killhand; then
   sudo rmmod killhand
 fi
@@ -33,8 +38,17 @@ sudo insmod /usr/local/exoresolve/killhand.ko
 sudo rmmod killhand
 
 echo "Set /etc/resolv.conf for dnsmasq."
+sudo rm /etc/resolv.conf
 sudo cp $SCRIPT_DIR/sysfile_bits/resolv.conf /etc/resolv.conf
 
 printf "${RED}-------------- UNIFY LISTS -------------${NC}\n"
 python3 $SCRIPT_DIR/unify_lists.py
 printf "${GREEN}-------------- SUCCESSFUL --------------${NC}\n"
+
+
+echo "Modify rc.local to run exoresolve.py iff."
+if ! grep -xq "python3 /usr/local/exoresolve/exoresolve.py &" /etc/rc.local
+then
+    sudo sed -i -e '$i python3 /usr/local/exoresolve/exoresolve.py &\n' /etc/rc.local
+fi
+

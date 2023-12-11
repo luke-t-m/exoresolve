@@ -8,19 +8,19 @@ SHUTDOWN_TIME = time(21, 00)
 WAKEUP_TIME = time(4, 00)
 
 DNS_IP = "1.1.1.1"
+hovm = "/usr/local/exoresolve"
+dnsmasq_conf = f"{hovm}/dnsmasq.conf"
 
-hovm = "/home/luke/.godscarp"
-etc_conf = "/etc/dnsmasq.godscarp.conf"
 always_files = [
-    "/etc/hosts",
     "/etc/resolv.conf",
     "/etc/dnsmasq.conf",
-    etc_conf,
+    dnsmasq_conf,
+    f"{hovm}/lists/never.list",
 ]
 sometimes_files = always_files + [
-    f"{hovm}/godscarp.py",
-    f"{hovm}/never.list",
-    f"{hovm}/always.list",
+    f"{hovm}/exoresolve.py",
+    f"{hovm}/lists/always.list",
+    f"{hovm}/lists/sometimes.list",
     "/etc/rc.local",
 ]
 
@@ -98,27 +98,31 @@ def white_cfg_from(filename):
 
 
 def main():
+    # Make all catchable signal's handlers do nothing.
     catchable_sigs = set(signal.Signals) - {signal.SIGKILL, signal.SIGSTOP}
     for sig in catchable_sigs:
         signal.signal(sig, lambda *args: None)
+    # Load in killhand module which finds this process and overwrites the supposedly "uncatchable" signals' handlers.
     gigarun(["/usr/sbin/rmmod", "killhand"])
     gigarun(["/usr/sbin/insmod", f"{hovm}/killhand/killhand.ko"])
+    # Disable module loading till reboot.
+    gigawrite("/proc/sys/kernel/modules_disabled", "1")
 
     always_watchers = make_watchers(always_files)
     sometimes_watchers = make_watchers(sometimes_files)
     harbinger_watcher = Watcher(f"{hovm}/harbinger")
 
-    always_cfg = white_cfg_from(f"{hovm}/always.list")
-    sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/sometimes.list")
-    always_watchers[etc_conf].update(always_cfg)
-    sometimes_watchers[etc_conf].update(sometimes_cfg)
+    always_cfg = white_cfg_from(f"{hovm}/lists/always.list")
+    sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/lists/sometimes.list")
+    always_watchers[dnsmasq_conf].update(always_cfg)
+    sometimes_watchers[dnsmasq_conf].update(sometimes_cfg)
 
     while True:
         if harbinger_watcher.watch():
-            always_cfg = white_cfg_from(f"{hovm}/always.list")
-            sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/sometimes.list")
-            always_watchers[etc_conf].update(always_cfg)
-            sometimes_watchers[etc_conf].update(sometimes_cfg)
+            always_cfg = white_cfg_from(f"{hovm}/lists/always.list")
+            sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/lists/sometimes.list")
+            always_watchers[dnsmasq_conf].update(always_cfg)
+            sometimes_watchers[dnsmasq_conf].update(sometimes_cfg)
 
         now = datetime.now().time()
         if is_time_between(SOMETIMES_TIME, SHUTDOWN_TIME, now):
@@ -130,6 +134,7 @@ def main():
             if watcher.watch():
                 gigarun(["systemctl", "restart", "dnsmasq.service"])
                 gigarun(["killall", "firefox"])
+                gigarun(["killall", "chrome"])
 
         if is_time_between(SHUTDOWN_TIME, WAKEUP_TIME, now):
             for _, watcher in always_watchers.items():
