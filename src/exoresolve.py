@@ -105,15 +105,16 @@ def main():
         signal.signal(sig, lambda *args: None)
     # Load in killhand module which finds this process and overwrites the supposedly "uncatchable" signals' handlers.
     gigarun(["/usr/sbin/rmmod", "killhand"])
-    gigarun(["/usr/sbin/insmod", f"{hovm}/killhand/killhand.ko"])
+    gigarun(["/usr/sbin/insmod", f"{hovm}/killhand.ko"])
+    gigarun(["/usr/sbin/rmmod", "killhand"])
     # Disable module loading till reboot.
-    gigawrite("/proc/sys/kernel/modules_disabled", "1")
+    #gigawrite("/proc/sys/kernel/modules_disabled", "1")
 
     always_watchers = make_watchers(always_files)
     sometimes_watchers = make_watchers(sometimes_files)
     harbinger_watcher = Watcher(f"{hovm}/harbinger")
 
-    always_cfg = white_cfg_from(f"{hovm}/lists/always.list")
+    always_cfg = "address=/#/127.0.0.1\n" + white_cfg_from(f"{hovm}/lists/always.list")
     sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/lists/sometimes.list")
     always_watchers[dnsmasq_conf].update(always_cfg)
     sometimes_watchers[dnsmasq_conf].update(sometimes_cfg)

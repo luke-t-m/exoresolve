@@ -56,7 +56,7 @@ for list_name in ["always", "sometimes", "never"]:
 
     for section in enc_sections:
         if section in sections:
-            sections[section] += enc_sections[section]
+            sections[section].update(enc_sections[section])
         else:
             sections[section] = enc_sections[section]
 

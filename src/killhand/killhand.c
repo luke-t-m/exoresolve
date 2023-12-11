@@ -63,7 +63,6 @@ static struct task_struct * find_target_process_by_name(char * name) {
     struct task_struct * iter;
     for_each_process(iter) {
         if(strcmp(name, iter->comm) == 0)
-			printk("werked?");
             return iter;
     }
     return NULL;

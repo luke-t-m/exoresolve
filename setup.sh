@@ -42,7 +42,7 @@ sudo rm /etc/resolv.conf
 sudo cp $SCRIPT_DIR/sysfile_bits/resolv.conf /etc/resolv.conf
 
 printf "${RED}-------------- UNIFY LISTS -------------${NC}\n"
-python3 $SCRIPT_DIR/unify_lists.py
+sudo python3 $SCRIPT_DIR/unify_lists.py
 printf "${GREEN}-------------- SUCCESSFUL --------------${NC}\n"
 
 
@@ -50,5 +50,11 @@ echo "Modify rc.local to run exoresolve.py iff."
 if ! grep -xq "python3 /usr/local/exoresolve/exoresolve.py &" /etc/rc.local
 then
     sudo sed -i -e '$i python3 /usr/local/exoresolve/exoresolve.py &\n' /etc/rc.local
+fi
+
+echo "Modify /etc/dnsmasq.conf to source our dnsmasq.conf iff."
+if ! grep -xq "conf-file=/usr/local/exoresolve/dnsmasq.conf" /etc/dnsmasq.conf
+then
+    sudo sed -i -e '$i conf-file=/usr/local/exoresolve/dnsmasq.conf\n' /etc/dnsmasq.conf
 fi
 
