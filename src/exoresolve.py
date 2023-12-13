@@ -54,9 +54,12 @@ class Watcher:
         if contents:
             self.contents = contents
         else:
-            self.contents = gigaread(filename)
+            self.contents = None
 
     def watch(self):
+        if self.contents is None:
+            self.update(gigaread(self.filename))
+
         if gigaread(self.filename) != self.contents:
             gigawrite(self.filename, self.contents)
             return True
