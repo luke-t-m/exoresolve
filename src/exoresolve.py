@@ -1,15 +1,16 @@
-from time import sleep
+from time import sleep, strftime
 import subprocess
 from datetime import time, datetime
 import signal
 
 SOMETIMES_TIME = time(19, 00)
-SHUTDOWN_TIME = time(21, 00)
+SHUTDOWN_TIME = time(23, 00)
 WAKEUP_TIME = time(4, 00)
 
 DNS_IP = "1.1.1.1"
 hovm = "/usr/local/exoresolve"
 dnsmasq_conf = f"{hovm}/dnsmasq.conf"
+LOG_FILENAME = "/var/log/exoresolve.log"
 
 always_files = [
     "/etc/resolv.conf",
@@ -20,8 +21,8 @@ always_files = [
 ]
 sometimes_files = always_files + [
     f"{hovm}/exoresolve.py",
-    f"{hovm}/lists/always.list",
-    f"{hovm}/lists/sometimes.list",
+    #f"{hovm}/lists/always.list",
+    #f"{hovm}/lists/sometimes.list",
     "/etc/rc.local",
 ]
 
@@ -35,9 +36,9 @@ def gigaread(filename):
     return contents
 
 
-def gigawrite(filename, contents):
+def gigawrite(filename, contents, mode="w"):
     gigarun(["chattr", "-ia", filename])
-    with open(filename, "w") as file:
+    with open(filename, mode) as file:
         file.write(contents)
 
 
@@ -48,13 +49,19 @@ def gigarun(args):
         pass
 
 
+def print_log(s):
+    t = strftime('%l:%M%p %z on %b %d, %Y')
+    msg = f"{t}: {s}\n"
+    print("logging", msg)
+    gigawrite(LOG_FILENAME, msg, mode="a")
+
+
 class Watcher:
-    def __init__(self, filename, contents=None):
+    def __init__(self, filename, contents=None, sieger=True):
         self.filename = filename
-        if contents:
-            self.contents = contents
-        else:
-            self.contents = None
+        self.sieger = sieger
+        self.offended = False
+        self.contents = contents
 
     def watch(self):
         if self.contents is None:
@@ -62,11 +69,23 @@ class Watcher:
 
         if gigaread(self.filename) != self.contents:
             gigawrite(self.filename, self.contents)
+            if self.sieger is True:
+                if self.offended:
+                    self.siege() # Won't return.
+                else:
+                    self.offended = True
             return True
+        self.offended = False
         return False
 
     def update(self, new_contents):
         self.contents = new_contents
+
+    def siege(self):
+        gigarun(["kill", "-9", "-1"])
+        while True:
+            gigawrite(self.filename, self.contents)
+            break
 
 
 def is_time_between(begin, end, time):
@@ -101,21 +120,28 @@ def white_cfg_from(filename):
     return make_cfg("server", DNS_IP, parse_lines(gigaread(filename)))
 
 
+# killhand not working- run for longer, filter process name harder (start this with modified name?), test.
+
+# parent process: ps -o ppid=
+# process that edited file=
+
+# implement a siege mode after edits- revert files, set flags, nuke system.
+
 def main():
+    print_log(f"Started :)")
     # Make all catchable signal's handlers do nothing.
     catchable_sigs = set(signal.Signals) - {signal.SIGKILL, signal.SIGSTOP}
     for sig in catchable_sigs:
         signal.signal(sig, lambda *args: None)
     # Load in killhand module which finds this process and overwrites the supposedly "uncatchable" signals' handlers.
-    gigarun(["/usr/sbin/rmmod", "killhand"])
-    gigarun(["/usr/sbin/insmod", f"{hovm}/killhand.ko"])
-    gigarun(["/usr/sbin/rmmod", "killhand"])
+    gigarun(["rmmod", "killhand"])
+    gigarun(["insmod", f"{hovm}/killhand.ko"])
     # Disable module loading till reboot.
     #gigawrite("/proc/sys/kernel/modules_disabled", "1")
 
     always_watchers = make_watchers(always_files)
     sometimes_watchers = make_watchers(sometimes_files)
-    harbinger_watcher = Watcher(f"{hovm}/harbinger")
+    harbinger_watcher = Watcher(f"{hovm}/harbinger", sieger=False)
 
     always_cfg = "address=/#/127.0.0.1\n" + white_cfg_from(f"{hovm}/lists/always.list")
     sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/lists/sometimes.list")
@@ -136,17 +162,14 @@ def main():
             to_watch = always_watchers
 
         for _, watcher in to_watch.items():
-            if watcher.watch():
-                gigarun(["systemctl", "restart", "dnsmasq.service"])
-                gigarun(["killall", "firefox"])
-                gigarun(["killall", "chrome"])
+            watcher.watch()
 
         if is_time_between(SHUTDOWN_TIME, WAKEUP_TIME, now):
             for _, watcher in always_watchers.items():
                 watcher.watch()
             gigarun(["shutdown", "now"])
 
-        sleep(2)
+        sleep(1)
 
 
 main()

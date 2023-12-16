@@ -60,3 +60,4 @@ dkms.conf
 
 # Own.
 *.list
+encrypted_lists/never.list.enc
