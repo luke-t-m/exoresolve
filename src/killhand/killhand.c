@@ -72,10 +72,11 @@ static int __init proc_prot_init(void) {
     struct task_struct *this;
     this = find_target_process_by_name("python3");
     if (NULL == this) {
-        printk("Process not found.\n");
+        printk("Couldn't find process..\n");
         return 0;
     }
     protect_process(this);
+	printk("Protected process.\n");
 
     return 0;
 }
