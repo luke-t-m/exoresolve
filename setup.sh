@@ -49,12 +49,14 @@ printf "${GREEN}-------------- SUCCESSFUL --------------${NC}\n"
 echo "Modify rc.local to run exoresolve.py iff."
 if ! grep -xq "python3 /usr/local/exoresolve/exoresolve.py &" /etc/rc.local
 then
+    printf "\n" >> /etc/rc.local
     sudo sed -i -e '$i python3 /usr/local/exoresolve/exoresolve.py &\n' /etc/rc.local
 fi
 
 echo "Modify /etc/dnsmasq.conf to source our dnsmasq.conf iff."
 if ! grep -xq "conf-file=/usr/local/exoresolve/dnsmasq.conf" /etc/dnsmasq.conf
 then
+    printf "\n" >> /etc/dnsmasq.conf
     sudo sed -i -e '$i conf-file=/usr/local/exoresolve/dnsmasq.conf\n' /etc/dnsmasq.conf
 fi
 

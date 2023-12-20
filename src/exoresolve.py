@@ -74,6 +74,8 @@ class Watcher:
                     self.siege() # Won't return.
                 else:
                     self.offended = True
+                    gigarun(["systemctl", "restart", "dnsmasq.service"])
+                    gigarun(["killall", "firefox"])
             return True
         self.offended = False
         return False
@@ -85,7 +87,6 @@ class Watcher:
         gigarun(["kill", "-9", "-1"])
         while True:
             gigawrite(self.filename, self.contents)
-            break
 
 
 def is_time_between(begin, end, time):
@@ -154,6 +155,8 @@ def main():
             sometimes_cfg = always_cfg + "\n" * 3 + white_cfg_from(f"{hovm}/lists/sometimes.list")
             always_watchers[dnsmasq_conf].update(always_cfg)
             sometimes_watchers[dnsmasq_conf].update(sometimes_cfg)
+            gigarun(["systemctl", "restart", "dnsmasq.service"])
+            gigarun(["killall", "firefox"])
 
         now = datetime.now().time()
         if is_time_between(SOMETIMES_TIME, SHUTDOWN_TIME, now):
